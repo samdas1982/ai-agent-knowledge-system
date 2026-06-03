@@ -11,6 +11,7 @@ import logging
 
 from app.config import get_settings
 from app.utils.logger import setup_logger
+from app.api.routes import documents, queries, health
 
 # Configure logging
 logger = setup_logger(__name__)
@@ -26,6 +27,7 @@ async def lifespan(app: FastAPI):
     logger.info(f"Debug mode: {settings.debug}")
     logger.info(f"Vector DB: {settings.vector_db_type}")
     logger.info(f"LLM Model: {settings.llm_model}")
+    logger.info(f"API listening on {settings.api_host}:{settings.api_port}")
     
     yield
     
@@ -36,7 +38,7 @@ async def lifespan(app: FastAPI):
 # Initialize FastAPI application
 app = FastAPI(
     title=settings.api_title,
-    description="AI-powered agent system for querying enterprise documents using RAG",
+    description="AI-powered agent system for querying enterprise documents using RAG and Agentic AI",
     version=settings.api_version,
     debug=settings.debug,
     lifespan=lifespan,
@@ -67,42 +69,34 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Health check endpoint
-@app.get("/health", tags=["System"])
-async def health_check():
-    """
-    Health check endpoint.
-    
-    Returns:
-        dict: Health status
-    """
-    return {
-        "status": "healthy",
-        "service": settings.app_name,
-        "environment": settings.app_env,
-        "version": settings.api_version,
-    }
-
-
+# Root endpoint
 @app.get("/", tags=["System"])
 async def root():
     """
     Root endpoint with API information.
     
     Returns:
-        dict: API information
+        dict: API information and useful links
     """
     return {
         "name": settings.app_name,
         "version": settings.api_version,
         "description": "AI Agent Knowledge System - Enterprise Document Query Platform",
         "documentation": "/docs",
+        "openapi": "/openapi.json",
         "health_check": "/health",
+        "status": "/api/status",
+        "endpoints": {
+            "documents": "/api/documents",
+            "queries": "/api/queries",
+        },
     }
 
 
-# Import and include routers (to be created in Task 2)
-# from app.api.routes import documents, queries, health
+# Include routers
+app.include_router(health.router)
+app.include_router(documents.router)
+app.include_router(queries.router)
 
 
 if __name__ == "__main__":
